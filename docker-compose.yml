@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Base de Datos PostgreSQL con persistencia en volumen local
+  db:
+    image: postgres:16-alpine
+    container_name: erplis_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_DB: ${POSTGRES_DB:-erplis_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-erplis_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Aplicación Web Next.js (ERP & LIS)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: erplis_app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@db:5432/${POSTGRES_DB:-erplis_db}?schema=public"
+      JWT_SECRET: ${JWT_SECRET:-erplis_secret_key_prod_2026_super_secure}
+      NEXT_PUBLIC_APP_NAME: "ERP LIS Venezuela"
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:
+    driver: local

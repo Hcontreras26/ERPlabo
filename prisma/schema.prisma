@@ -1,0 +1,288 @@
+// Prisma Schema Multi-tenant (Shared Database, Shared Schema)
+// Desarrollo Local (SQLite)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// TENANT (EMPRESA / LABORATORIO MATRIZ)
+// ==========================================
+
+model Tenant {
+  id        String   @id @default(uuid())
+  nombre    String
+  rif       String
+  slug      String   @unique
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  // Relaciones de aislamiento Multi-tenant
+  branches  Branch[]
+  users     User[]
+  patients  Patient[]
+  tests     Test[]
+  orders    Order[]
+  payments  Payment[]
+  settings  LabSetting?
+
+  @@map("tenants")
+}
+
+// ==========================================
+// SUCURSAL (SEDE FÍSICA)
+// ==========================================
+
+model Branch {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  nombre    String   // Ej: "Sede Principal", "Sede Norte"
+  direccion String
+  telefono  String
+  createdAt DateTime @default(now())
+
+  users     User[]
+  orders    Order[]
+  payments  Payment[]
+
+  @@index([tenantId])
+  @@map("branches")
+}
+
+// ==========================================
+// MODELOS DEL DOMINIO
+// ==========================================
+
+model User {
+  id             String   @id @default(uuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  branchId       String?
+  branch         Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  email          String   @unique
+  passwordHash   String
+  nombreCompleto String
+  rol            String   // "ADMINISTRADOR" | "BIOANALISTA" | "RECEPCIONISTA"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@map("users")
+}
+
+model LabSetting {
+  id                 String   @id @default(uuid())
+  tenantId           String   @unique
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  nombreLaboratorio  String   @default("Laboratorio Central C.A.")
+  rif                String   @default("J-40123456-7")
+  direccion          String   @default("Av. Francisco de Miranda, Edif. Centro Médico, PB - Caracas")
+  telefono           String   @default("+58 (212) 555-0199")
+  email              String?  @default("contacto@labclinic.com.ve")
+  tasaBcvActual      Decimal  @default(36.50)
+  logoUrl            String?
+  mensajePiePagina   String?  @default("Resultados confidenciales con fines diagnósticos. Protegidos por la ley del ejercicio del Bioanálisis.")
+  updatedAt          DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("lab_settings")
+}
+
+model Patient {
+  id              String    @id @default(uuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  cedula          String
+  nombreCompleto  String
+  fechaNacimiento DateTime
+  sexo            String    // "MASCULINO" | "FEMENINO"
+  telefono        String
+  email           String?
+  direccion       String?
+  
+  orders          Order[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([tenantId, cedula])
+  @@index([tenantId])
+  @@index([cedula])
+  @@index([nombreCompleto])
+  @@map("patients")
+}
+
+model Test {
+  id                 String          @id @default(uuid())
+  tenantId           String
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  codigo             String
+  nombre             String
+  precioUsd          Decimal
+  tiempoEntregaHoras Int             @default(24)
+  categoria          String
+  activo             Boolean         @default(true)
+
+  parameters         TestParameter[]
+  orderItems         OrderItem[]
+
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@unique([tenantId, codigo])
+  @@index([tenantId])
+  @@index([categoria])
+  @@index([activo])
+  @@map("tests")
+}
+
+model TestParameter {
+  id                 String         @id @default(uuid())
+  testId             String
+  test               Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
+  
+  nombre             String
+  unidadMedida       String?
+  tipoResultado      String         @default("NUMERICO") // "NUMERICO" | "TEXTO" | "POSITIVO_NEGATIVO"
+  
+  rangoMinHombre     Float?
+  rangoMaxHombre     Float?
+  rangoMinMujer      Float?
+  rangoMaxMujer      Float?
+  rangoMinNino       Float?
+  rangoMaxNino       Float?
+  
+  valorPorDefecto    String?
+  ordenVisualizacion Int            @default(0)
+
+  results            OrderResult[]
+
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([testId])
+  @@map("test_parameters")
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  codigoOrden     String
+  patientId       String
+  patient         Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  
+  fechaCreacion   DateTime      @default(now())
+  estado          String        @default("PENDIENTE") // "PENDIENTE" | "EN_PROCESO" | "VALIDADO" | "ENTREGADO"
+  medicoTratante  String?
+  observaciones   String?
+
+  totalUsd        Decimal
+  tasaBcv         Decimal
+  totalBs         Decimal
+  estadoPago      String        @default("PENDIENTE") // "PENDIENTE" | "PARCIAL" | "PAGADO"
+
+  items           OrderItem[]
+  results         OrderResult[]
+  payments        Payment[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([tenantId, codigoOrden])
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([patientId])
+  @@index([estado])
+  @@index([estadoPago])
+  @@index([fechaCreacion])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                String   @id @default(uuid())
+  orderId           String
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  testId            String
+  test              Test     @relation(fields: [testId], references: [id], onDelete: Restrict)
+  
+  precioUnitarioUsd Decimal
+
+  createdAt         DateTime @default(now())
+
+  @@index([orderId])
+  @@index([testId])
+  @@map("order_items")
+}
+
+model OrderResult {
+  id              String        @id @default(uuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  testParameterId String
+  testParameter   TestParameter @relation(fields: [testParameterId], references: [id], onDelete: Restrict)
+  
+  valor           String
+  fueraDeRango    Boolean       @default(false)
+  observaciones   String?
+  
+  validado        Boolean       @default(false)
+  validadoPor     String?
+  fechaValidacion DateTime?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([orderId, testParameterId])
+  @@index([orderId])
+  @@index([testParameterId])
+  @@map("order_results")
+}
+
+model Payment {
+  id                  String     @id @default(uuid())
+  tenantId            String
+  tenant              Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  branchId            String?
+  branch              Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  orderId             String
+  order               Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  metodoPago          String     // "EFECTIVO_USD" | "EFECTIVO_BS" | "PAGO_MOVIL" | "PUNTO_DE_VENTA" | "ZELLE" | "BINANCE_USDT" | "TRANSFERENCIA_BS"
+  monedaOriginal      String     // "USD" | "VES"
+  montoOriginal       Decimal
+  tasaCambio          Decimal
+  montoEquivalenteUsd Decimal
+  
+  referencia          String?
+  notas               String?
+
+  createdAt           DateTime   @default(now())
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([orderId])
+  @@index([metodoPago])
+  @@index([createdAt])
+  @@map("payments")
+}
