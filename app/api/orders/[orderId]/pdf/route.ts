@@ -56,7 +56,7 @@ export async function GET(
 
     // Renderizar PDF a Buffer
     const pdfBuffer = await renderToBuffer(
-      React.createElement(LabReportPdf, { order: order as any })
+      React.createElement(LabReportPdf, { order }) as React.ReactElement<any>
     );
 
     return new NextResponse(pdfBuffer as any, {
