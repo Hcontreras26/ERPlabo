@@ -5,7 +5,8 @@
   "description": "Sistema ERP & LIS para Laboratorio Clínico con Facturación Multimoneda (VES/USD - Tasa BCV)",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
