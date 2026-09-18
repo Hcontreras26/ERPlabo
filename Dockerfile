@@ -45,8 +45,8 @@ ENV HOSTNAME "0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copiar archivos públicos y estáticos del build standalone
-COPY --from=builder /app/public ./public
+# Crear carpeta pública y copiar estáticos del build standalone
+RUN mkdir -p ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
