@@ -1,6 +1,6 @@
 # ERP / LIS Laboratorio Clínico y Facturación Multimoneda (Venezuela) 🧪🇻🇪
 
-Sistema integral de gestión para Laboratorios Clínicos y Facturación Multimoneda adaptado al mercado venezolano con arquitectura **Multi-Tenant (Shared Database, Shared Schema)** y soporte **Multi-Sucursal (Multi-Branch)**.
+Sistema integral de gestión para Laboratorios Clínicos y Facturación Multimoneda adaptado al mercado venezolano con arquitectura
 
 ---
 
