@@ -1,3 +1,7 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import React from 'react';
@@ -9,7 +13,7 @@ export async function GET(
   { params }: { params: { orderId: string } }
 ) {
   try {
-    const { orderId } = params;
+    const orderId = params?.orderId;
 
     if (!orderId) {
       return NextResponse.json({ error: 'ID de orden requerido' }, { status: 400 });
