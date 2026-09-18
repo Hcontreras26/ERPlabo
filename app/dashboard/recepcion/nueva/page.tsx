@@ -44,6 +44,8 @@ interface TestItem {
   nombre: string;
   precioUsd: number;
   categoria: string;
+  area?: string;
+  tipoMuestra?: string;
   tiempoEntregaHoras: number;
 }
 
@@ -506,7 +508,9 @@ export default function NuevaRecepcionPage() {
                         <h3 className="font-semibold text-slate-900 text-sm mt-1 line-clamp-1">
                           {test.nombre}
                         </h3>
-                        <p className="text-[11px] text-slate-500">{test.categoria}</p>
+                        <p className="text-[11px] text-slate-500">
+                          {test.categoria} {test.tipoMuestra ? `• ${test.tipoMuestra}` : ''}
+                        </p>
                       </div>
 
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-1">

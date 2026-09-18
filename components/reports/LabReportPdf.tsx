@@ -170,11 +170,14 @@ export interface LabReportPdfProps {
         codigo: string;
         nombre: string;
         categoria: string;
+        area?: string;
+        tipoMuestra?: string;
         parameters: Array<{
           id: string;
           nombre: string;
           unidadMedida: string | null;
           tipoResultado: string;
+          requiereControl?: boolean;
           rangoMinHombre: number | null;
           rangoMaxHombre: number | null;
           rangoMinMujer: number | null;
@@ -188,6 +191,7 @@ export interface LabReportPdfProps {
     results: Array<{
       testParameterId: string;
       valor: string;
+      valorControl?: string | null;
       fueraDeRango: boolean;
       observaciones: string | null;
       validado: boolean;
@@ -275,7 +279,9 @@ export function LabReportPdf({ order }: LabReportPdfProps) {
               {/* Encabezado del Examen */}
               <View style={styles.testHeader}>
                 <Text>{test.nombre.toUpperCase()}</Text>
-                <Text style={{ fontSize: 8 }}>{test.categoria}</Text>
+                <Text style={{ fontSize: 8 }}>
+                  {test.categoria} {test.tipoMuestra ? `• Muestra: ${test.tipoMuestra}` : ''}
+                </Text>
               </View>
 
               {/* Columnas de la Tabla */}
@@ -290,6 +296,7 @@ export function LabReportPdf({ order }: LabReportPdfProps) {
               {test.parameters.map((param) => {
                 const result = order.results.find((r) => r.testParameterId === param.id);
                 const valor = result?.valor || param.valorPorDefecto || '-';
+                const valorControl = result?.valorControl;
                 const isOutOfRange = result?.fueraDeRango || false;
 
                 // Rango de Referencia
@@ -307,11 +314,17 @@ export function LabReportPdf({ order }: LabReportPdfProps) {
                 }
 
                 let rangeStr = 'Referencial';
-                if (param.tipoResultado === 'NUMERICO' && min != null && max != null) {
+                if (param.requiereControl && valorControl) {
+                  rangeStr = `Testigo: ${valorControl} ${param.unidadMedida || 'seg'}`;
+                } else if (param.tipoResultado === 'NUMERICO' && min != null && max != null) {
                   rangeStr = `${min} - ${max}`;
                 } else if (param.tipoResultado === 'POSITIVO_NEGATIVO') {
                   rangeStr = 'Negativo / No reactivo';
                 }
+
+                const displayResult = param.requiereControl && valorControl
+                  ? `${valor} (Control: ${valorControl})`
+                  : valor;
 
                 return (
                   <View key={param.id} style={styles.tableRow}>
@@ -322,7 +335,7 @@ export function LabReportPdf({ order }: LabReportPdfProps) {
                         isOutOfRange ? styles.outOfRangeText : { fontFamily: 'Helvetica' },
                       ]}
                     >
-                      {valor} {isOutOfRange ? '*' : ''}
+                      {displayResult} {isOutOfRange ? '*' : ''}
                     </Text>
                     <Text style={styles.colUnit}>{param.unidadMedida || '-'}</Text>
                     <Text style={styles.colRange}>{rangeStr}</Text>

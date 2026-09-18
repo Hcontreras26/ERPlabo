@@ -134,6 +134,8 @@ model Test {
   precioUsd          Decimal
   tiempoEntregaHoras Int             @default(24)
   categoria          String
+  area               String          @default("HEMATOLOGIA") // "HEMATOLOGIA" | "QUIMICA_SANGUINEA" | "COAGULACION" | "UROANALISIS" | "COPROANALISIS" | "INMUNOLOGIA_SEROLOGIA" | "HORMONAS"
+  tipoMuestra        String          @default("Suero") // "Suero" | "Plasma Citratado" | "Sangre Total EDTA" | "Orina"
   activo             Boolean         @default(true)
 
   parameters         TestParameter[]
@@ -145,6 +147,7 @@ model Test {
   @@unique([tenantId, codigo])
   @@index([tenantId])
   @@index([categoria])
+  @@index([area])
   @@index([activo])
   @@map("tests")
 }
@@ -157,6 +160,7 @@ model TestParameter {
   nombre             String
   unidadMedida       String?
   tipoResultado      String         @default("NUMERICO") // "NUMERICO" | "TEXTO" | "POSITIVO_NEGATIVO"
+  requiereControl    Boolean        @default(false)      // Para pruebas de coagulación TP/TPT (Paciente vs Control)
   
   rangoMinHombre     Float?
   rangoMaxHombre     Float?
@@ -241,6 +245,7 @@ model OrderResult {
   testParameter   TestParameter @relation(fields: [testParameterId], references: [id], onDelete: Restrict)
   
   valor           String
+  valorControl    String?       // Tiempo o valor del Control/Testigo para pruebas de coagulación
   fueraDeRango    Boolean       @default(false)
   observaciones   String?
   

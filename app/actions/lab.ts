@@ -61,6 +61,7 @@ const updateResultsSchema = z.object({
     z.object({
       id: z.string().uuid(),
       valor: z.string(),
+      valorControl: z.string().optional().nullable(),
       fueraDeRango: z.boolean(),
       observaciones: z.string().optional().nullable(),
     })
@@ -89,6 +90,7 @@ export async function saveOrderResultsDraft(input: z.infer<typeof updateResultsS
         where: { id: r.id },
         data: {
           valor: r.valor,
+          valorControl: r.valorControl !== undefined ? r.valorControl : undefined,
           fueraDeRango: r.fueraDeRango,
           observaciones: r.observaciones || null,
         },

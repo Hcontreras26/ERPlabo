@@ -58,6 +58,16 @@ enum Rol {
   RECEPCIONISTA
 }
 
+enum LAB_AREA {
+  HEMATOLOGIA
+  QUIMICA_SANGUINEA
+  COAGULACION
+  UROANALISIS
+  COPROANALISIS
+  INMUNOLOGIA_SEROLOGIA
+  HORMONAS
+}
+
 // ==========================================
 // TENANT (EMPRESA / LABORATORIO MATRIZ)
 // ==========================================
@@ -181,6 +191,8 @@ model Test {
   precioUsd          Decimal         @db.Decimal(10, 2)
   tiempoEntregaHoras Int             @default(24)
   categoria          String
+  area               LAB_AREA        @default(HEMATOLOGIA)
+  tipoMuestra        String          @default("Suero")
   activo             Boolean         @default(true)
 
   parameters         TestParameter[]
@@ -192,6 +204,7 @@ model Test {
   @@unique([tenantId, codigo])
   @@index([tenantId])
   @@index([categoria])
+  @@index([area])
   @@index([activo])
   @@map("tests")
 }
@@ -204,6 +217,7 @@ model TestParameter {
   nombre             String
   unidadMedida       String?
   tipoResultado      TipoResultado  @default(NUMERICO)
+  requiereControl    Boolean        @default(false)
   
   rangoMinHombre     Float?
   rangoMaxHombre     Float?
@@ -288,6 +302,7 @@ model OrderResult {
   testParameter   TestParameter @relation(fields: [testParameterId], references: [id], onDelete: Restrict)
   
   valor           String
+  valorControl    String?
   fueraDeRango    Boolean       @default(false)
   observaciones   String?
   
